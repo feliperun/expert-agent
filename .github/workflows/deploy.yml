@@ -1,0 +1,106 @@
+name: Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      agent_id:
+        description: "Agent ID to deploy (e.g., ecg-expert). Leave empty to only build+push image."
+        required: false
+        type: string
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [production]
+        default: production
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT: micromed-agents
+  GCP_REGION: southamerica-east1
+  REGISTRY: southamerica-east1-docker.pkg.dev
+
+jobs:
+  build-push:
+    name: Build & push image
+    runs-on: ubuntu-24.04
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Compute image tag
+        id: meta
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          if [[ "${GITHUB_EVENT_NAME}" != "release" ]]; then
+            TAG="dev-${GITHUB_SHA::7}"
+          fi
+          IMAGE="${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/expert-agent/backend:${TAG}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ${{ env.REGISTRY }}/${{ env.GCP_PROJECT }}/expert-agent/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-agent:
+    name: Deploy agent ${{ github.event.inputs.agent_id }}
+    needs: build-push
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.agent_id != '' }}
+    runs-on: ubuntu-24.04
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: micromedio/micromed-agents
+          token: ${{ secrets.MICROMED_AGENTS_PAT }}
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.8.x"
+
+      - name: Apply agent stack
+        working-directory: infra/agent
+        env:
+          AGENT_ID: ${{ github.event.inputs.agent_id }}
+          IMAGE: ${{ needs.build-push.outputs.image }}
+        run: |
+          tofu init -backend-config="prefix=agent/${AGENT_ID}"
+          tofu apply -auto-approve \
+            -var="project_id=${{ env.GCP_PROJECT }}" \
+            -var="region=${{ env.GCP_REGION }}" \
+            -var="agent_id=${AGENT_ID}" \
+            -var="image=${IMAGE}"

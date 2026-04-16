@@ -1,0 +1,66 @@
+# Plans & personal context (contain sensitive info like project IDs, emails, schemas in draft)
+agent-expert.plan.md
+*.plan.md
+.plan/
+.cursor/plans/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.whl
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+uv.lock
+
+# Node / Rust leftovers (in case)
+node_modules/
+target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# OpenTofu / Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+crash.log
+
+# Docker
+*.tar
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.hypothesis/
+coverage.xml

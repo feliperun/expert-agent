@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-type:
+    name: Lint & Type
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.x"
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra vertex --extra otel
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy backend/app cli/agent_cli
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.x"
+          enable-cache: true
+
+      - run: uv python install ${{ matrix.python-version }}
+
+      - run: uv sync --extra dev
+
+      - name: Run tests
+        run: uv run pytest --cov=backend/app --cov=cli/agent_cli --cov-report=xml
+
+      - uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  docker-build:
+    name: Docker build smoke
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: expert-agent:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  infra-validate:
+    name: OpenTofu validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.8.x"
+      - name: Format check
+        run: tofu fmt -recursive -check infra/ || true
+      - name: Validate platform stack
+        working-directory: infra/platform
+        run: |
+          if [ -f main.tf ]; then
+            tofu init -backend=false
+            tofu validate
+          fi
+      - name: Validate chroma stack
+        working-directory: infra/chroma
+        run: |
+          if [ -f main.tf ]; then
+            tofu init -backend=false
+            tofu validate
+          fi
+      - name: Validate agent stack
+        working-directory: infra/agent
+        run: |
+          if [ -f main.tf ]; then
+            tofu init -backend=false
+            tofu validate
+          fi

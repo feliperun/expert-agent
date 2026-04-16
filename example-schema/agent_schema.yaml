@@ -1,0 +1,45 @@
+apiVersion: expert-agent/v1
+kind: AgentSchema
+metadata:
+  name: example-expert
+  description: "Example ultra-specialist agent — replace with your domain."
+  version: "0.1.0"
+spec:
+  model:
+    provider: gemini
+    name: gemini-3.1-pro
+    temperature: 0.3
+    max_output_tokens: 8192
+    top_p: 0.95
+  identity:
+    system_prompt_file: ./prompts/identity.md
+  knowledge:
+    reference_docs_dir: ./docs
+    include_patterns:
+      - "*.md"
+      - "*.pdf"
+      - "*.txt"
+    exclude_patterns:
+      - "_drafts/*"
+  context_cache:
+    enabled: true
+    ttl_seconds: 3600
+    refresh_before_expiry_seconds: 300
+  memory:
+    short_term:
+      buffer_size: 20
+      storage: firestore
+    long_term:
+      enabled: true
+      engine: mempalace
+      max_recall_results: 5
+      persistence:
+        type: chroma-http
+        # host + port + ssl are injected by the runtime via env vars
+        # (MEMPALACE_CHROMA_HOST, MEMPALACE_CHROMA_PORT, MEMPALACE_CHROMA_SSL)
+  grounding:
+    enabled: true
+    max_citations: 10
+  rate_limit:
+    requests_per_minute: 30
+    tokens_per_day: 1000000
