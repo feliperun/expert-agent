@@ -121,8 +121,8 @@ gcloud builds submit . \
 ### 4. Scaffold and deploy your first agent
 
 ```bash
-# Install the CLI (PEP 723 / uv tool style)
-uv tool install "git+https://github.com/feliperbroering/expert-agent.git#subdirectory=cli"
+# Install the CLI (uv tool style — single root pyproject.toml)
+uv tool install "git+https://github.com/feliperbroering/expert-agent.git"
 
 # Scaffold an agent locally
 agent-cli init my-expert
