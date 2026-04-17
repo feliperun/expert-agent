@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible bug in the CLI, backend, testkit, or infra docs.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please include a minimal reproducer so we can get to a fix quickly.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+      placeholder: "`expert ask` hangs after the first SSE chunk..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction
+      description: Smallest set of steps, files, and commands that reproduces the bug.
+      placeholder: |
+        1. `expert init demo`
+        2. `cd demo`
+        3. `expert validate`
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Paste traceback, stderr, screenshots, or logs.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: expert version
+      placeholder: "expert --version"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "python --version"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 15 / Ubuntu 24.04 / Windows 11"
+    validations:
+      required: true

@@ -1,0 +1,40 @@
+name: Feature request
+description: Pitch a new capability or workflow improvement.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please lead with the user problem, not the implementation detail.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Who is blocked today, and by what?
+      placeholder: "As someone curating multiple private agents, I want..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed shape
+      description: CLI flag, new schema field, backend endpoint, docs flow, etc.
+      placeholder: "`expert deploy --agent cardiology` ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else did you try or think about?
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Extra context
+      description: Links, screenshots, prior art, related issues.
