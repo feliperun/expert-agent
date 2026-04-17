@@ -1,7 +1,7 @@
 [project]
 name = "expert-agent"
 version = "0.1.0"
-description = "Ultra-specialist AI agents as a service — NotebookLM-style, powered by Gemini 3.1 Pro long-context + caching."
+description = "Ultra-specialist AI agents as a service — NotebookLM-style, powered by Gemini long-context + Context Caching."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
