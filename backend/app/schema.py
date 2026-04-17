@@ -21,6 +21,14 @@ class ModelSpec(BaseModel):
     temperature: Annotated[float, Field(ge=0.0, le=2.0)] = 0.3
     max_output_tokens: Annotated[int, Field(ge=256, le=65_536)] = 8_192
     top_p: Annotated[float, Field(ge=0.0, le=1.0)] = 0.95
+    # Gemini 2.5 thinking budget (tokens spent on internal reasoning before the
+    # answer stream starts). `None` = SDK default (Pro thinks ~a lot).
+    # Caps per Google docs:
+    #   gemini-2.5-pro       : 128 - 32_768 (cannot be 0)
+    #   gemini-2.5-flash     : 0 - 24_576   (0 disables thinking entirely)
+    #   gemini-2.5-flash-lite: 512 - 24_576
+    # Lower = lower TTFT and cheaper tokens, higher = stronger reasoning.
+    thinking_budget: Annotated[int | None, Field(ge=0, le=32_768)] = None
 
 
 class IdentitySpec(BaseModel):

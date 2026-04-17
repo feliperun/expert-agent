@@ -17,6 +17,7 @@ def build_llm_client(schema: AgentSchema, settings: Settings) -> LLMClient:
     provider = schema.spec.model.provider
     model_name = schema.spec.model.name
     max_citations = schema.spec.grounding.max_citations
+    thinking_budget = schema.spec.model.thinking_budget
 
     if provider == "gemini":
         api_key = settings.gemini_api_key.get_secret_value()
@@ -28,6 +29,7 @@ def build_llm_client(schema: AgentSchema, settings: Settings) -> LLMClient:
             api_key=api_key,
             model=model_name,
             max_citations=max_citations,
+            thinking_budget=thinking_budget,
         )
 
     if provider == "gemini-vertex":

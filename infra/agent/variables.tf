@@ -49,9 +49,19 @@ variable "memory" {
 }
 
 variable "cache_ttl_seconds" {
-  description = "Context Cache TTL passed to the app as CACHE_TTL_SECONDS."
+  description = <<-EOT
+    Context Cache TTL passed to the app as CACHE_TTL_SECONDS.
+
+    Trade-off: Gemini charges cache storage per (tokens * hour). With a large
+    corpus (e.g. 800k tokens) a 1h TTL is cheap but cold users pay a ~30s
+    "recreate cache" penalty. A 6h TTL costs a few cents/day and keeps the
+    cache alive across typical idle gaps. 24h is viable for heavy use.
+
+    Must also be <= the value used when the app calls create_cache; see
+    schema.spec.context_cache.ttl_seconds.
+  EOT
   type        = number
-  default     = 3600
+  default     = 21600 # 6 hours
 }
 
 variable "admin_key_secret_name" {

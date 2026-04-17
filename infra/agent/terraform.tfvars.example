@@ -11,5 +11,5 @@ image    = "us-central1-docker.pkg.dev/your-gcp-project-id/expert-agent/backend:
 # max_instances     = 10
 # cpu               = "1"
 # memory            = "1Gi"
-# cache_ttl_seconds = 3600
+# cache_ttl_seconds = 21600   # 6h; bump to 86400 for 24/7 usage patterns
 # admin_key_secret_name = "admin-key-my-expert"

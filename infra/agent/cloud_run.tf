@@ -18,7 +18,7 @@ locals {
 
 resource "google_cloud_run_v2_service" "agent" {
   project      = var.project_id
-  name         = "agent-${var.agent_id}"
+  name         = var.agent_id
   location     = var.region
   ingress      = "INGRESS_TRAFFIC_ALL"
   launch_stage = "GA"
@@ -56,6 +56,11 @@ resource "google_cloud_run_v2_service" "agent" {
           cpu    = var.cpu
           memory = var.memory
         }
+        # Temporarily boosts CPU (up to 4x) while the container is starting up.
+        # Eliminates most of the cold-start penalty on Python workloads with
+        # heavy imports (google-genai, chromadb-client, etc.). Billed only
+        # during the boost window, so it's essentially free in practice.
+        startup_cpu_boost = true
       }
 
       ports {

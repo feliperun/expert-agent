@@ -92,12 +92,13 @@ class _FakeClient:
         self.aio = _FakeAio()
 
 
-def _make_client() -> tuple[GeminiAIStudioClient, _FakeClient]:
+def _make_client(*, thinking_budget: int | None = None) -> tuple[GeminiAIStudioClient, _FakeClient]:
     fake = _FakeClient()
     client = GeminiAIStudioClient.__new__(GeminiAIStudioClient)
     # Manual init to avoid importing google.genai in tests.
     client._model = "gemini-test"  # type: ignore[attr-defined]
     client._max_citations = 10  # type: ignore[attr-defined]
+    client._thinking_budget = thinking_budget  # type: ignore[attr-defined]
     client._client = fake  # type: ignore[attr-defined]
     return client, fake
 
@@ -209,6 +210,38 @@ async def test_generate_stream_yields_chunks() -> None:
     assert usages and usages[0].input_tokens == 10 and usages[0].cached_tokens == 8
     assert len(fake.aio.models.calls) == 1
     assert fake.aio.models.calls[0]["config"].cached_content == "cachedContents/xyz"
+    # No thinking_budget configured → SDK default (no ThinkingConfig sent).
+    assert fake.aio.models.calls[0]["config"].thinking_config is None
+
+
+@pytest.mark.asyncio
+async def test_generate_stream_forwards_thinking_budget() -> None:
+    pytest.importorskip("google.genai")
+    client, fake = _make_client(thinking_budget=128)
+
+    @dataclass
+    class _Chunk:
+        text: str
+        candidates: list[Any] = field(default_factory=list)
+        usage_metadata: Any = None
+
+    fake.aio.models.chunks = [_Chunk(text="ok")]
+
+    cache = CacheRef(
+        name="cachedContents/xyz",
+        expire_time=datetime.now(tz=UTC),
+        model="gemini-test",
+    )
+    async for _ in client.generate_stream(
+        cache, [Content(role="user", parts=[ContentPart(text="hi")])], grounding=False
+    ):
+        pass
+
+    cfg = fake.aio.models.calls[0]["config"]
+    # ThinkingConfig exposes the budget under `thinking_budget` (snake_case)
+    # on the pydantic model even though the SDK kwarg is camelCase.
+    assert cfg.thinking_config is not None
+    assert cfg.thinking_config.thinking_budget == 128
 
 
 @pytest.mark.asyncio

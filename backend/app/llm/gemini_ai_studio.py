@@ -84,11 +84,13 @@ class GeminiAIStudioClient:
         api_key: str,
         model: str = DEFAULT_MODEL,
         max_citations: int = 10,
+        thinking_budget: int | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("GeminiAIStudioClient requires a non-empty api_key")
         self._model = model
         self._max_citations = max_citations
+        self._thinking_budget = thinking_budget
         self._client: Any = self._build_client(api_key)
 
     @staticmethod
@@ -243,9 +245,15 @@ class GeminiAIStudioClient:
 
         sdk_contents = [_to_sdk_content(c) for c in contents]
         tools = [gt.Tool(google_search=gt.GoogleSearch())] if grounding else None
+        thinking_config = (
+            gt.ThinkingConfig(thinkingBudget=self._thinking_budget)
+            if self._thinking_budget is not None
+            else None
+        )
         config = gt.GenerateContentConfig(
             cached_content=cache.name,
             tools=tools,
+            thinking_config=thinking_config,
         )
 
         try:
