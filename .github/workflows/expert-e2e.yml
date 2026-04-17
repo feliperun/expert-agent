@@ -7,7 +7,7 @@ name: expert-e2e (reusable)
 #     e2e:
 #       uses: feliperbroering/expert-agent/.github/workflows/expert-e2e.yml@main
 #       with:
-#         schema: ecg-expert/agent_schema.yaml
+#         schema: my-expert/agent_schema.yaml
 #         suite: 05_ask_latency
 #       secrets:
 #         endpoint: ${{ secrets.EXPERT_AGENT_ENDPOINT }}
@@ -25,6 +25,13 @@ on:
         required: false
         type: string
         default: agent_schema.yaml
+      agent:
+        description: >-
+          Agent name (as declared in expert.toml or the name of a sibling
+          dir containing agent_schema.yaml). Omit for single-agent repos.
+        required: false
+        type: string
+        default: ""
       suite:
         description: 'Robot suite stem to run (e.g. "05_ask_latency"). Omit for all.'
         required: false
@@ -102,6 +109,9 @@ jobs:
         id: test
         run: |
           args=()
+          if [ -n "${{ inputs.agent }}" ]; then
+            args+=(--agent "${{ inputs.agent }}")
+          fi
           if [ -n "${{ inputs.suite }}" ]; then
             args+=(--suite "${{ inputs.suite }}")
           fi

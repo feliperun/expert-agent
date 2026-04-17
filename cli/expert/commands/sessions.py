@@ -11,6 +11,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 
 from ..config import make_http_client
+from ..context import resolve as resolve_context
 from ..ui import console, print_error, print_info, print_success, print_warning
 
 app = typer.Typer(
@@ -18,6 +19,23 @@ app = typer.Typer(
     help="Manage user sessions (list, show, delete — for LGPD right-to-erasure).",
     no_args_is_help=True,
 )
+
+
+def _remote(
+    agent: str | None,
+    endpoint_override: str | None,
+    api_key_override: str | None,
+) -> tuple[str, str]:
+    """Resolve (endpoint, api_key) for every session command via the workspace."""
+    ctx = resolve_context(
+        agent=agent,
+        endpoint=endpoint_override,
+        api_key=api_key_override,
+        require_remote=True,
+    )
+    if ctx.selector_source not in ("single", "schema-flag"):
+        print_info(f"→ [cyan]{ctx.name}[/cyan] ({ctx.selector_source})")
+    return ctx.require_remote()
 
 
 async def _get_json(endpoint: str, api_key: str, path: str) -> Any:
@@ -51,30 +69,44 @@ def _run(coro: Any) -> Any:
         raise typer.Exit(code=2) from exc
 
 
+_AgentOpt = Annotated[
+    str | None,
+    typer.Option("--agent", "-a", help="Agent name from the workspace."),
+]
 _EndpointOpt = Annotated[
-    str,
-    typer.Option("--endpoint", envvar="EXPERT_AGENT_ENDPOINT", help="Base URL of the agent."),
+    str | None,
+    typer.Option(
+        "--endpoint",
+        envvar="EXPERT_AGENT_ENDPOINT",
+        help="Override the agent's endpoint.",
+    ),
 ]
 _ApiKeyOpt = Annotated[
-    str,
-    typer.Option("--api-key", envvar="EXPERT_AGENT_API_KEY", help="Admin bearer token."),
+    str | None,
+    typer.Option(
+        "--api-key",
+        envvar="EXPERT_AGENT_API_KEY",
+        help="Override the agent's admin bearer token.",
+    ),
 ]
 
 
 @app.command("list")
 def list_cmd(
-    endpoint: _EndpointOpt,
-    api_key: _ApiKeyOpt,
+    agent: _AgentOpt = None,
+    endpoint: _EndpointOpt = None,
+    api_key: _ApiKeyOpt = None,
     user: Annotated[
         str | None,
         typer.Option("--user", help="Filter sessions by user_id."),
     ] = None,
 ) -> None:
     """List active sessions."""
+    endpoint_resolved, api_key_resolved = _remote(agent, endpoint, api_key)
     path = "/sessions"
     if user:
         path = f"/sessions?user_id={user}"
-    body = _run(_get_json(endpoint.rstrip("/"), api_key, path))
+    body = _run(_get_json(endpoint_resolved, api_key_resolved, path))
     items: list[dict[str, Any]]
     if isinstance(body, list):
         items = [x for x in body if isinstance(x, dict)]
@@ -105,11 +137,13 @@ def list_cmd(
 @app.command("show")
 def show_cmd(
     session_id: Annotated[str, typer.Argument(help="Session ID.")],
-    endpoint: _EndpointOpt,
-    api_key: _ApiKeyOpt,
+    agent: _AgentOpt = None,
+    endpoint: _EndpointOpt = None,
+    api_key: _ApiKeyOpt = None,
 ) -> None:
     """Show the message history of a single session."""
-    body = _run(_get_json(endpoint.rstrip("/"), api_key, f"/sessions/{session_id}"))
+    endpoint_resolved, api_key_resolved = _remote(agent, endpoint, api_key)
+    body = _run(_get_json(endpoint_resolved, api_key_resolved, f"/sessions/{session_id}"))
     if not isinstance(body, dict):
         print_error("unexpected response shape.")
         raise typer.Exit(code=2)
@@ -132,14 +166,16 @@ def show_cmd(
 @app.command("delete")
 def delete_cmd(
     session_id: Annotated[str, typer.Argument(help="Session ID to delete.")],
-    endpoint: _EndpointOpt,
-    api_key: _ApiKeyOpt,
+    agent: _AgentOpt = None,
+    endpoint: _EndpointOpt = None,
+    api_key: _ApiKeyOpt = None,
     yes: Annotated[
         bool,
         typer.Option("--yes", "-y", help="Skip the confirmation prompt."),
     ] = False,
 ) -> None:
     """Delete a session and its message history (LGPD right-to-erasure)."""
+    endpoint_resolved, api_key_resolved = _remote(agent, endpoint, api_key)
     if not yes:
         confirmed = typer.confirm(
             f"Delete session {session_id}? This action is irreversible.",
@@ -149,5 +185,5 @@ def delete_cmd(
             print_warning("Aborted.")
             raise typer.Exit(code=0)
 
-    _run(_delete(endpoint.rstrip("/"), api_key, f"/sessions/{session_id}"))
+    _run(_delete(endpoint_resolved, api_key_resolved, f"/sessions/{session_id}"))
     print_success(f"Session [cyan]{session_id}[/cyan] deleted.")

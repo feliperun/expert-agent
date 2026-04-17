@@ -59,6 +59,9 @@ def test_init_rejects_invalid_name(tmp_path: Path) -> None:
         input="Invalid_Name\nvalid-name\nDescription.\n",
     )
     assert result.exit_code == 0, result.output
-    assert "ERROR" in result.output
+    # Invalid name is rejected with a visible error before the retry accepts
+    # the valid one. We check for the (stable) regex contract rather than the
+    # transient glyph/color-coded prefix.
+    assert "name must match" in result.output
     schema = AgentSchema.from_yaml(dest / "agent_schema.yaml")
     assert schema.metadata.name == "valid-name"

@@ -44,6 +44,7 @@ from rich.markdown import Markdown
 from rich.text import Text
 
 from ..config import make_http_client
+from ..context import resolve as resolve_context
 from ..ui import console, print_error, print_info, print_success
 
 _USER_ID = "cli"
@@ -56,22 +57,26 @@ _USER_ID = "cli"
 
 def cmd(
     question: Annotated[str, typer.Argument(help="Question to send to the agent.")],
+    agent: Annotated[
+        str | None,
+        typer.Option("--agent", "-a", help="Agent name from the workspace."),
+    ] = None,
     endpoint: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--endpoint",
             envvar="EXPERT_AGENT_ENDPOINT",
-            help="Base URL of the running agent.",
+            help="Override the agent's endpoint.",
         ),
-    ],
+    ] = None,
     api_key: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--api-key",
             envvar="EXPERT_AGENT_API_KEY",
-            help="Admin bearer token.",
+            help="Override the agent's admin bearer token.",
         ),
-    ],
+    ] = None,
     session: Annotated[
         str | None,
         typer.Option(
@@ -88,6 +93,15 @@ def cmd(
     ] = True,
 ) -> None:
     """Ask the agent a question."""
+    ctx = resolve_context(
+        agent=agent,
+        endpoint=endpoint,
+        api_key=api_key,
+        require_remote=True,
+    )
+    endpoint, api_key = ctx.require_remote()
+    if ctx.selector_source not in ("single", "schema-flag"):
+        print_info(f"→ [cyan]{ctx.name}[/cyan] ({ctx.selector_source})")
     if session is None:
         session = str(uuid.uuid4())
         print_info(f"Starting new session [cyan]{session}[/cyan].")

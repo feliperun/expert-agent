@@ -4,13 +4,13 @@ version = "0.1.1"
 description = "Ultra-specialist AI agents as a service — NotebookLM-style, powered by Gemini long-context + Context Caching."
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "Apache-2.0" }
+license = { text = "MIT" }
 authors = [{ name = "Felipe Broering", email = "hi@felipe.run" }]
 keywords = ["ai", "agents", "gemini", "llm", "notebooklm", "cloud-run", "fastapi"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
 ]
@@ -70,7 +70,7 @@ test = [
 ]
 
 [project.scripts]
-expert = "expert.main:app"
+expert = "expert.main:main"
 expert-agent-backend = "app.main:run"
 
 [project.urls]

@@ -217,5 +217,24 @@ def cmd(
         raise typer.Exit(code=1) from exc
 
     print_success(f"Created new agent at [cyan]{path}[/cyan].")
+    _print_workspace_hint(path, name)
     print_info("Next step: [bold]expert validate --schema ./agent_schema.yaml[/bold]")
     console.print()
+
+
+def _print_workspace_hint(path: Path, name: str) -> None:
+    """If the new agent lives inside a multi-agent workspace, nudge the user."""
+    from ..workspace import Workspace
+
+    parent = path.parent
+    try:
+        ws = Workspace.discover(cwd=parent)
+    except Exception:  # pragma: no cover - discovery is best-effort here
+        return
+
+    # Only hint when there's >1 agent (either discovered or declared).
+    if len(ws.agents_by_name) >= 2:
+        print_info(
+            f"Detected multi-agent workspace at [cyan]{ws.root}[/cyan]. "
+            f"Use [bold]expert agents[/bold] to list, or [bold]expert @{name} <cmd>[/bold]."
+        )

@@ -57,11 +57,15 @@ class ExpertLibrary:
     # ------------------------------------------------------------------
 
     @keyword("Run Expert CLI")
-    def run_cli(self, *args: str, expect_rc: int = 0, cwd: str | None = None) -> dict[str, Any]:
+    def run_cli(
+        self, *args: str, expect_rc: int | None = 0, cwd: str | None = None
+    ) -> dict[str, Any]:
         """Execute `expert <args>` and return `{rc, stdout, stderr, elapsed_ms}`.
 
         Fails if the exit code differs from ``expect_rc`` (use ``expect_rc=None``
-        to skip the check entirely).
+        to skip the check entirely). ``expect_rc`` is typed ``int | None`` so
+        Robot Framework's dynamic-argument converter accepts ``${None}`` from
+        suite files without trying to coerce it into ``int`` (which fails).
         """
         binary = shutil.which("expert")
         if binary is None:

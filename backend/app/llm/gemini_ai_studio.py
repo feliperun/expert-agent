@@ -36,7 +36,7 @@ logger = structlog.get_logger(__name__)
 # Conservative default for unit tests / smoke runs. Production agents pin a
 # real Pro tier (e.g. ``gemini-2.5-pro``) via ``spec.model.name`` in their
 # AgentSchema; bump together with the SDK version when a newer Pro ships.
-DEFAULT_MODEL = "gemini-2.0-flash-exp"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 _TRANSIENT_EXC: tuple[type[BaseException], ...] = (TimeoutError, ConnectionError)
 
@@ -73,7 +73,7 @@ class GeminiAIStudioClient:
         Gemini AI Studio API key (secret).
     model:
         Model identifier, e.g. ``"gemini-2.5-pro"`` or
-        ``"gemini-2.0-flash-exp"`` for cheaper smoke tests.
+        ``"gemini-2.5-flash"`` for cheaper smoke tests.
     max_citations:
         Upper bound on citations surfaced per generation chunk.
     """

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 import typer
 from app.schema import AgentSchema
 
+from ..context import resolve as resolve_context
 from ..ui import console, print_error, print_info, print_success, print_warning
 
 if TYPE_CHECKING:
@@ -140,20 +141,31 @@ def cmd(
             help="API key for google-genai token counting.",
         ),
     ],
+    agent: Annotated[
+        str | None,
+        typer.Option("--agent", "-a", help="Agent name from the workspace."),
+    ] = None,
     schema_path: Annotated[
-        Path,
-        typer.Option("--schema", "-s", help="Path to agent_schema.yaml."),
-    ] = Path("./agent_schema.yaml"),
+        Path | None,
+        typer.Option(
+            "--schema",
+            "-s",
+            help="Explicit path to agent_schema.yaml (bypasses workspace resolution).",
+        ),
+    ] = None,
     model: Annotated[
         str,
         typer.Option("--model", help="Model used for the count_tokens API call."),
-    ] = "gemini-2.0-flash-exp",
+    ] = "gemini-2.5-flash",
 ) -> None:
     """Walk the knowledge base and sum the estimated token count per file."""
-    schema_path = schema_path.resolve()
+    ctx = resolve_context(agent=agent, schema=schema_path)
+    schema_path = ctx.schema_path
     if not schema_path.is_file():
         print_error(f"schema file not found: {schema_path}")
         raise typer.Exit(code=1)
+    if ctx.selector_source not in ("single", "schema-flag"):
+        print_info(f"agent [cyan]{ctx.name}[/cyan] ({ctx.selector_source})")
 
     try:
         schema = AgentSchema.from_yaml(schema_path)
