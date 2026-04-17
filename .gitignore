@@ -22,7 +22,6 @@ env/
 
 # uv
 .uv/
-uv.lock
 
 # Node / Rust leftovers (in case)
 node_modules/
