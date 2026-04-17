@@ -64,7 +64,7 @@ def test_count_tokens_sums_across_files(tmp_path: Path, monkeypatch: pytest.Monk
             "--gemini-api-key",
             "test-key",
             "--model",
-            "gemini-2.0-flash-exp",
+            "gemini-2.5-flash",
         ],
     )
     assert result.exit_code == 0, result.output

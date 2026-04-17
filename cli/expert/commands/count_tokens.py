@@ -156,7 +156,7 @@ def cmd(
     model: Annotated[
         str,
         typer.Option("--model", help="Model used for the count_tokens API call."),
-    ] = "gemini-2.0-flash-exp",
+    ] = "gemini-2.5-flash",
 ) -> None:
     """Walk the knowledge base and sum the estimated token count per file."""
     ctx = resolve_context(agent=agent, schema=schema_path)
