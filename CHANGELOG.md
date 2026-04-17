@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/feliperun/expert-agent/compare/v0.1.2...v0.1.3) (2026-04-17)
+
+
+### Bug Fixes
+
+* Update canonical GitHub URL to feliperun/expert-agent ([#5](https://github.com/feliperun/expert-agent/issues/5)) ([0e4047c](https://github.com/feliperun/expert-agent/commit/0e4047c85fc9f4c5c232fd6c85955e448d09db5e))
+
 ## [0.1.2](https://github.com/feliperun/expert-agent/compare/v0.1.1...v0.1.2) (2026-04-17)
 
 
