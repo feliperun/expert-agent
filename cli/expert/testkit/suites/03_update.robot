@@ -30,5 +30,5 @@ Token Count Is Stable After Whitespace Edit
     ${bumped}=       Bump Schema Version      ${original}
     ${copied}=       Write Temp Schema        ${bumped}    ${WORKDIR}
     ${after}=        Run Expert CLI    count-tokens    --schema    ${copied}    expect_rc=${None}
-    Log    before: ${before}[stdout]
-    Log    after:  ${after}[stdout]
+    Log Many    before:    ${before}[stdout]
+    Log Many    after:     ${after}[stdout]
