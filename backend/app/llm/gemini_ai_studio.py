@@ -169,7 +169,10 @@ class GeminiAIStudioClient:
         bucket_name, object_key = parsed.netloc, parsed.path.lstrip("/")
 
         def _download() -> bytes:
-            from google.cloud import storage
+            # `google.cloud` is a namespace package, so mypy can't resolve the
+            # `storage` attribute statically even though the distribution
+            # `google-cloud-storage` is installed.
+            from google.cloud import storage  # type: ignore[attr-defined]
 
             client = storage.Client()
             blob = client.bucket(bucket_name).blob(object_key)
