@@ -223,9 +223,58 @@ expert sync                  Push docs + rebuild Context Cache
 expert ask "<question>"      Stream answer from a deployed agent
 expert sessions list/delete  Manage user sessions (LGPD)
 expert test                  Run the packaged E2E Robot Framework kit
+expert agents                List agents known to this workspace
+expert use <name>            Pin an agent as the active one for this workspace
+expert which                 Print the agent a bare command would resolve to
 ```
 
 Every command supports `--help` for full options.
+
+### Multi-agent workspaces
+
+Private repositories often host several specialists side-by-side. `expert`
+auto-detects a multi-agent layout and lets you target any agent with three
+equivalent syntaxes:
+
+```bash
+# One-off shortcut — great for quick hops between agents.
+expert @ecg   ask "What does lead V1 tell us?"
+expert @derm  ask "Differential for an acral nodule?"
+
+# Explicit flag — CI-friendly, unambiguous.
+expert ask --agent ecg "..."
+
+# Pin for the current workspace (stored in .expert/state.json).
+expert use ecg
+expert ask "..."        # now routes to ecg
+expert use --clear      # undo
+```
+
+Discovery order (first match wins):
+
+1. `expert.toml` at the workspace root (authoritative — aliases, endpoints, defaults).
+2. Any sibling directory containing `agent_schema.yaml` (auto-discovery).
+3. Fallback: single-agent mode against `./agent_schema.yaml`.
+
+An `expert.toml` looks like this:
+
+```toml
+[defaults]
+agent = "ecg"   # used when no flag / pin / env var is set
+
+[agents.ecg]
+schema      = "ecg-expert/agent_schema.yaml"
+endpoint    = "https://ecg-agent.example.com"
+api_key_env = "ECG_ADMIN_KEY"      # reads from env at runtime
+description = "12-lead ECG specialist"
+
+[agents.derm]
+schema = "derm-expert/agent_schema.yaml"
+```
+
+Prefix matching is supported: `expert @ec ask "..."` resolves to `ecg` if
+no other agent name starts with `ec`. Ambiguous prefixes raise a friendly
+error listing all candidates.
 
 ---
 

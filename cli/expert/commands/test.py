@@ -18,6 +18,7 @@ from typing import Annotated
 
 import typer
 
+from ..context import resolve as resolve_context
 from ..ui import console, print_error, print_info, print_success
 
 # Canonical order of the packaged suites. The numeric prefixes keep `robot`
@@ -33,11 +34,19 @@ _DEFAULT_SUITES: tuple[str, ...] = (
 
 
 def cmd(
+    agent: Annotated[
+        str | None,
+        typer.Option(
+            "--agent",
+            "-a",
+            help="Agent name from the workspace. Resolved via `expert agents`.",
+        ),
+    ] = None,
     suite: Annotated[
         list[str] | None,
         typer.Option(
             "--suite",
-            "-s",
+            "-S",
             help=(
                 "Run only the given suite(s) by stem (e.g. '05_ask_latency'). "
                 "Can be passed multiple times. Default: all."
@@ -72,16 +81,17 @@ def cmd(
         Path | None,
         typer.Option(
             "--schema",
-            help="Path to agent_schema.yaml (defaults to env EXPERT_AGENT_SCHEMA).",
+            "-s",
+            help="Explicit path to agent_schema.yaml (bypasses workspace resolution).",
         ),
     ] = None,
     endpoint: Annotated[
         str | None,
-        typer.Option("--endpoint", help="Override EXPERT_AGENT_ENDPOINT."),
+        typer.Option("--endpoint", help="Override the agent's endpoint."),
     ] = None,
     api_key: Annotated[
         str | None,
-        typer.Option("--api-key", help="Override EXPERT_AGENT_API_KEY."),
+        typer.Option("--api-key", help="Override the agent's admin bearer token."),
     ] = None,
     dry_run: Annotated[
         bool,
@@ -118,15 +128,25 @@ def cmd(
         print_error(f"No suites matched selection {suite!r}. Available: {available}")
         raise typer.Exit(code=2)
 
-    # Propagate overrides to the environment so ExpertLibrary's defaults pick
-    # them up without needing --var boilerplate in simple cases.
-    env_overrides: dict[str, str] = {}
-    if endpoint:
-        env_overrides["EXPERT_AGENT_ENDPOINT"] = endpoint
-    if api_key:
-        env_overrides["EXPERT_AGENT_API_KEY"] = api_key
-    if schema:
-        env_overrides["EXPERT_AGENT_SCHEMA"] = str(schema)
+    # Resolve the agent context (supports --agent / @alias / `expert use`)
+    # so that the packaged Robot suites see fully-populated env vars even
+    # in multi-agent workspaces without requiring --var or --endpoint.
+    # We fall back to a bare resolve (schema-only) so that the offline
+    # suites still work when endpoint/api_key are not configured.
+    ctx = resolve_context(
+        agent=agent,
+        schema=schema,
+        endpoint=endpoint,
+        api_key=api_key,
+    )
+    if ctx.selector_source not in ("single", "schema-flag"):
+        print_info(f"→ [cyan]{ctx.name}[/cyan] ({ctx.selector_source})")
+
+    env_overrides: dict[str, str] = {"EXPERT_AGENT_SCHEMA": str(ctx.schema_path)}
+    if ctx.endpoint:
+        env_overrides["EXPERT_AGENT_ENDPOINT"] = ctx.endpoint
+    if ctx.api_key:
+        env_overrides["EXPERT_AGENT_API_KEY"] = ctx.api_key
     for key, value in env_overrides.items():
         os.environ[key] = value
 

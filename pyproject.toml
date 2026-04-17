@@ -70,7 +70,7 @@ test = [
 ]
 
 [project.scripts]
-expert = "expert.main:app"
+expert = "expert.main:main"
 expert-agent-backend = "app.main:run"
 
 [project.urls]

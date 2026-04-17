@@ -17,6 +17,7 @@ import typer
 from app.schema import AgentSchema
 
 from ..config import make_http_client
+from ..context import resolve as resolve_context
 from ..ui import console, print_diff_table, print_error, print_info, print_success
 
 
@@ -85,32 +86,46 @@ async def _post_sync(
 
 
 def cmd(
+    agent: Annotated[
+        str | None,
+        typer.Option("--agent", "-a", help="Agent name from the workspace."),
+    ] = None,
     endpoint: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--endpoint",
             envvar="EXPERT_AGENT_ENDPOINT",
-            help="Base URL of the running agent.",
+            help="Override the agent's endpoint (defaults to workspace/env value).",
         ),
-    ],
+    ] = None,
     api_key: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--api-key",
             envvar="EXPERT_AGENT_API_KEY",
-            help="Admin bearer token.",
+            help="Override the agent's admin bearer token.",
         ),
-    ],
+    ] = None,
     schema_path: Annotated[
-        Path,
-        typer.Option("--schema", "-s", help="Path to agent_schema.yaml."),
-    ] = Path("./agent_schema.yaml"),
+        Path | None,
+        typer.Option("--schema", "-s", help="Explicit path to agent_schema.yaml."),
+    ] = None,
 ) -> None:
     """Upload the local knowledge base and trigger a Context Cache rebuild."""
-    schema_path = schema_path.resolve()
+    ctx = resolve_context(
+        agent=agent,
+        schema=schema_path,
+        endpoint=endpoint,
+        api_key=api_key,
+        require_remote=True,
+    )
+    schema_path = ctx.schema_path
+    endpoint, api_key = ctx.require_remote()
     if not schema_path.is_file():
         print_error(f"schema file not found: {schema_path}")
         raise typer.Exit(code=1)
+    if ctx.selector_source not in ("single", "schema-flag"):
+        print_info(f"agent [cyan]{ctx.name}[/cyan] ({ctx.selector_source})")
 
     try:
         schema = AgentSchema.from_yaml(schema_path)

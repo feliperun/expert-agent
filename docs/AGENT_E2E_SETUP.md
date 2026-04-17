@@ -45,8 +45,16 @@ first or warn the user.
 - [ ] Repo settings → *Actions → General → Workflow permissions* allow
       reading from public actions (default).
 
-If the repo hosts **multiple agents** (a monorepo), each agent gets its own
-workflow file pointing at its own schema.
+If the repo hosts **multiple agents** (a monorepo), you have two options:
+
+1. **One workflow per agent** — each file pins a different `schema:` and a
+   different set of secrets. Recommended when the agents are owned by
+   different teams or deployed to different projects.
+2. **One workflow, matrix-over-agents** — declare an `expert.toml` at the
+   repo root and let `expert test` resolve each agent by name. See the
+   "matrix" snippet in [§6. Customising for your agent](#6-customising-for-your-agent).
+
+Both integrations share the same reusable workflow; only the caller changes.
 
 ---
 
@@ -209,6 +217,42 @@ You almost never need to fork the suites. Knobs available out of the box:
 | Run only one suite                     | Trigger with the `suite:` choice input (`gh workflow run … -f suite=05_ask_latency`).                |
 | Pin to a stable upstream version       | Replace `@main` with `@v0.1.1` everywhere (both `uses:` and `cli-ref:`).                             |
 | Add a per-deploy smoke check           | Call the reusable workflow from your `deploy.yml` after the Cloud Run rollout finishes.              |
+| Test N agents in one monorepo          | See "matrix" snippet below, or keep one workflow-per-agent for clearer blame.                        |
+
+### Matrix over agents (monorepo)
+
+If `expert.toml` at the repo root declares several agents, the CLI already
+understands `expert test --agent <name>`. You can call the reusable workflow
+once per agent via a matrix:
+
+```yaml
+jobs:
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - { name: ecg,  schema: ecg-expert/agent_schema.yaml,  endpoint_secret: ECG_ENDPOINT,  key_secret: ECG_API_KEY }
+          - { name: derm, schema: derm-expert/agent_schema.yaml, endpoint_secret: DERM_ENDPOINT, key_secret: DERM_API_KEY }
+    uses: feliperbroering/expert-agent/.github/workflows/expert-e2e.yml@<<ref>>
+    with:
+      schema: ${{ matrix.agent.schema }}
+      sample-question: "ping"
+      cli-ref: <<ref>>
+    secrets:
+      endpoint: ${{ secrets[matrix.agent.endpoint_secret] }}
+      api-key:  ${{ secrets[matrix.agent.key_secret] }}
+```
+
+Locally, the same layout lets you do:
+
+```bash
+expert agents                   # list all known agents
+expert use ecg                  # pin ecg for this shell
+expert ask "..."                # routes to ecg
+expert @derm ask "..."          # one-off hop to derm
+expert test --agent derm        # run the packaged E2E kit against derm
+```
 
 If you genuinely need a *new* assertion the upstream suites don't cover,
 contribute it back to `expert-agent` rather than vendoring locally — the kit

@@ -9,7 +9,8 @@ import typer
 from app.schema import AgentSchema
 from pydantic import ValidationError
 
-from ..ui import print_error, print_schema, print_success, print_warning
+from ..context import resolve as resolve_context
+from ..ui import print_error, print_info, print_schema, print_success, print_warning
 
 
 def _iter_matching_files(
@@ -30,16 +31,31 @@ def _iter_matching_files(
 
 
 def cmd(
+    agent: Annotated[
+        str | None,
+        typer.Option(
+            "--agent",
+            "-a",
+            help="Agent name (from expert.toml or sibling dirs). See `expert agents`.",
+        ),
+    ] = None,
     schema_path: Annotated[
-        Path,
-        typer.Option("--schema", "-s", help="Path to agent_schema.yaml."),
-    ] = Path("./agent_schema.yaml"),
+        Path | None,
+        typer.Option(
+            "--schema",
+            "-s",
+            help="Explicit path to agent_schema.yaml (bypasses workspace resolution).",
+        ),
+    ] = None,
 ) -> None:
     """Validate an agent schema and its referenced filesystem layout."""
-    schema_path = schema_path.resolve()
+    ctx = resolve_context(agent=agent, schema=schema_path)
+    schema_path = ctx.schema_path
     if not schema_path.is_file():
         print_error(f"schema file not found: {schema_path}")
         raise typer.Exit(code=1)
+    if ctx.selector_source not in ("single", "schema-flag"):
+        print_info(f"agent [cyan]{ctx.name}[/cyan] ({ctx.selector_source})")
 
     try:
         schema = AgentSchema.from_yaml(schema_path)
