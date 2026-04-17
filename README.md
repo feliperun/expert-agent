@@ -273,6 +273,11 @@ jobs:
       api-key:  ${{ secrets.EXPERT_AGENT_API_KEY }}
 ```
 
+> **Wiring this into a private repo for the first time?** Follow
+> [`docs/AGENT_E2E_SETUP.md`](docs/AGENT_E2E_SETUP.md) — a copy-pasteable,
+> agent-friendly checklist that takes you from "empty repo with a schema" to
+> "green nightly E2E job" in five steps.
+
 ---
 
 ## Authentication
