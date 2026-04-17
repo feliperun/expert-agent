@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.2](https://github.com/feliperun/expert-agent/compare/v0.1.1...v0.1.2) (2026-04-17)
+
+
+### Features
+
+* Public launch — MIT license, brand block, governance, and multi-agent workspaces ([#4](https://github.com/feliperun/expert-agent/issues/4)) ([a35a034](https://github.com/feliperun/expert-agent/commit/a35a034caf48d4ae5c1048f00c65f3fff3b15cc6))
+
+
+### Documentation
+
+* Add agent-friendly E2E onboarding guide ([5ddb9ec](https://github.com/feliperun/expert-agent/commit/5ddb9ec55225514e74c26d259b395cfe7e3c7935))
+
 ## [0.1.1](https://github.com/feliperbroering/expert-agent/compare/v0.1.0...v0.1.1) (2026-04-17)
 
 

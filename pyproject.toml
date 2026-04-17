@@ -1,6 +1,6 @@
 [project]
 name = "expert-agent"
-version = "0.1.1"
+version = "0.1.2"
 description = "Ultra-specialist AI agents as a service — NotebookLM-style, powered by Gemini long-context + Context Caching."
 readme = "README.md"
 requires-python = ">=3.12"
