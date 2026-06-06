@@ -67,11 +67,13 @@ class SyncResult:
 class LocalFile(BaseModel):
     """A single file in the /docs/sync payload."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     path: str = Field(min_length=1)
     local_path: Path | None = None
     mime_type: str | None = None
+    sha256: str | None = None
+    size: int | None = None
 
 
 class DocsSyncRequest(BaseModel):
@@ -208,9 +210,20 @@ class DocsSyncService:
         entries: dict[str, FileEntry] = {}
         for item in files:
             if item.local_path is None:
-                raise ValueError(
-                    f"file {item.path!r} has no local_path; payload uploads require resolved paths"
-                )
+                if item.sha256 is not None and item.size is not None:
+                    mime = item.mime_type or "application/octet-stream"
+                    entries[item.path] = FileEntry(
+                        sha256=item.sha256,
+                        size=item.size,
+                        gcs_uri=f"gs://{self._bucket}/{self._object_key(item.path, item.sha256)}",
+                        mime_type=mime,
+                        updated_at=datetime.now(tz=UTC),
+                    )
+                    continue
+                else:
+                    raise ValueError(
+                        f"file {item.path!r} has no local_path and missing sha256/size; payload uploads require resolved paths"
+                    )
             src = Path(item.local_path)
             if not src.exists():
                 raise FileNotFoundError(f"file not found: {src}")
