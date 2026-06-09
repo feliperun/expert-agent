@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/feliperun/expert-agent/compare/v0.1.4...v0.1.5) (2026-06-09)
+
+
+### Bug Fixes
+
+* **sync:** Remote doc sync — MIME inference and CLI compatibility ([#9](https://github.com/feliperun/expert-agent/issues/9)) ([83c1954](https://github.com/feliperun/expert-agent/commit/83c1954a03b1adbe662d2be72a9501815a015c8c))
+
 ## [0.1.4](https://github.com/feliperun/expert-agent/compare/v0.1.3...v0.1.4) (2026-04-17)
 
 
