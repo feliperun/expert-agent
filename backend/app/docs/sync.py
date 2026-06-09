@@ -30,6 +30,7 @@ from .manifest import (
     ManifestDiff,
     SyncManifest,
     diff_manifests,
+    guess_mime,
     manifest_from_directory,
 )
 
@@ -67,11 +68,13 @@ class SyncResult:
 class LocalFile(BaseModel):
     """A single file in the /docs/sync payload."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     path: str = Field(min_length=1)
     local_path: Path | None = None
     mime_type: str | None = None
+    sha256: str | None = None
+    size: int | None = None
 
 
 class DocsSyncRequest(BaseModel):
@@ -203,14 +206,25 @@ class DocsSyncService:
         return f"gs://{self._bucket}/{self._object_key(relpath, entry.sha256)}"
 
     def _manifest_from_payload(self, files: list[LocalFile]) -> SyncManifest:
-        from .manifest import compute_file_sha256, guess_mime
+        from .manifest import compute_file_sha256
 
         entries: dict[str, FileEntry] = {}
         for item in files:
             if item.local_path is None:
-                raise ValueError(
-                    f"file {item.path!r} has no local_path; payload uploads require resolved paths"
-                )
+                if item.sha256 is not None and item.size is not None:
+                    mime = item.mime_type or guess_mime(Path(item.path))
+                    entries[item.path] = FileEntry(
+                        sha256=item.sha256,
+                        size=item.size,
+                        gcs_uri=f"gs://{self._bucket}/{self._object_key(item.path, item.sha256)}",
+                        mime_type=mime,
+                        updated_at=datetime.now(tz=UTC),
+                    )
+                    continue
+                else:
+                    raise ValueError(
+                        f"file {item.path!r} has no local_path and missing sha256/size; payload uploads require resolved paths"
+                    )
             src = Path(item.local_path)
             if not src.exists():
                 raise FileNotFoundError(f"file not found: {src}")
@@ -240,11 +254,19 @@ class DocsSyncService:
             if local is not None:
                 await self._gcs.upload_file(self._bucket, key, local, entry.mime_type)
             else:
-                # Walked-from-directory case: re-read the file fresh.
                 src = self._docs_dir / relpath
-                with src.open("rb") as fh:
-                    data = fh.read()
-                await self._gcs.upload_bytes(self._bucket, key, data, entry.mime_type)
+                if src.is_file():
+                    with src.open("rb") as fh:
+                        data = fh.read()
+                    await self._gcs.upload_bytes(self._bucket, key, data, entry.mime_type)
+                    continue
+                # Remote sync: CLI posts sha256/size; bytes may already be in GCS.
+                existing = await self._gcs.download_bytes(self._bucket, key)
+                if existing is None:
+                    raise FileNotFoundError(
+                        f"file {relpath!r} not found under {self._docs_dir} "
+                        f"and not pre-uploaded to gs://{self._bucket}/{key}"
+                    )
 
     async def _delete_removed(self, diff: ManifestDiff, old: SyncManifest) -> None:
         for relpath in diff.removed:

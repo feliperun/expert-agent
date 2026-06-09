@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import mimetypes
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -37,6 +38,22 @@ def _iter_matching_files(
     return sorted(matched)
 
 
+_MIME_BY_SUFFIX = {
+    ".md": "text/markdown",
+    ".markdown": "text/markdown",
+    ".txt": "text/plain",
+    ".pdf": "application/pdf",
+}
+
+
+def _guess_mime(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in _MIME_BY_SUFFIX:
+        return _MIME_BY_SUFFIX[suffix]
+    guessed, _ = mimetypes.guess_type(path.as_posix())
+    return guessed or "application/octet-stream"
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as fh:
@@ -63,13 +80,11 @@ def _build_manifest(schema: AgentSchema, base_dir: Path) -> dict[str, Any]:
                 "path": str(rel),
                 "sha256": _sha256(file_path),
                 "size": file_path.stat().st_size,
+                "mime_type": _guess_mime(file_path),
             }
         )
-    return {
-        "agent_id": schema.agent_id,
-        "schema_version": schema.metadata.version,
-        "files": entries,
-    }
+    # Backend `DocsSyncRequest` only accepts `files` (extra=forbid on other keys).
+    return {"files": entries}
 
 
 async def _post_sync(
