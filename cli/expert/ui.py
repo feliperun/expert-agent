@@ -77,10 +77,24 @@ def print_diff_table(diff: dict[str, Any]) -> None:
     table.add_column("SHA", no_wrap=True, style="dim")
     table.add_column("Size", justify="right", no_wrap=True, style="dim")
 
+    def _normalize(entries: list[Any]) -> list[dict[str, Any]]:
+        normalized: list[dict[str, Any]] = []
+        for entry in entries:
+            if isinstance(entry, str):
+                normalized.append({"path": entry})
+            elif isinstance(entry, dict):
+                normalized.append(entry)
+        return normalized
+
     actions: list[tuple[str, str, str, list[dict[str, Any]]]] = [
-        ("+", "green", "added", list(diff.get("added", []) or [])),
-        ("~", "yellow", "updated", list(diff.get("updated", []) or [])),
-        ("-", "red", "removed", list(diff.get("removed", []) or [])),
+        ("+", "green", "added", _normalize(list(diff.get("added", []) or []))),
+        (
+            "~",
+            "yellow",
+            "updated",
+            _normalize(list(diff.get("updated", []) or diff.get("changed", []) or [])),
+        ),
+        ("-", "red", "removed", _normalize(list(diff.get("removed", []) or []))),
     ]
     total = 0
     for glyph, color, _name, entries in actions:
