@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/feliperun/expert-agent/compare/v0.1.5...v0.1.6) (2026-06-10)
+
+
+### Bug Fixes
+
+* **backend:** Warm context cache in background instead of blocking startup ([#11](https://github.com/feliperun/expert-agent/issues/11)) ([f0e5449](https://github.com/feliperun/expert-agent/commit/f0e5449aefc8c3a5261941c216f558c70c4fba1c))
+
 ## [0.1.5](https://github.com/feliperun/expert-agent/compare/v0.1.4...v0.1.5) (2026-06-09)
 
 
