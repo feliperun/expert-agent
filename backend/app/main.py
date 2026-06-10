@@ -274,15 +274,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             exclude_patterns=schema.spec.knowledge.exclude_patterns,
         )
         if schema.spec.context_cache.enabled:
-            # Warm the cache before accepting traffic. Without this, the first
-            # user request after a cold start pays the ~30s recreate penalty
-            # (File API uploads + cachedContents POST) if the Firestore state
-            # points to an expired cache. Cloud Run startup probes allow up to
-            # 240s, so even a full recreate still fits inside the probe window.
-            try:
-                await cache_manager.get_or_create()
-            except Exception as exc:
-                logger.warning("cache.prewarm_failed", error=str(exc))
+            # Warm the cache in the background instead of blocking startup.
+            # A full recreate (File API uploads + cachedContents POST) scales
+            # with corpus size and can exceed Cloud Run's 240s startup-probe
+            # window for large corpora, which kills the instance before it
+            # ever binds the port. The first request after a cold start may
+            # pay the recreate penalty, but the instance always comes up.
+            prewarm_manager = cache_manager
+
+            async def _prewarm_cache() -> None:
+                try:
+                    await prewarm_manager.get_or_create()
+                    logger.info("cache.prewarm_complete")
+                except Exception as exc:
+                    logger.warning("cache.prewarm_failed", error=str(exc))
+
+            app.state.cache_prewarm_task = asyncio.create_task(_prewarm_cache())
 
             refresher = CacheRefresher(
                 llm=llm,
@@ -330,6 +337,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         logger.info("app.shutdown.begin")
+        prewarm_task = getattr(app.state, "cache_prewarm_task", None)
+        if prewarm_task is not None and not prewarm_task.done():
+            prewarm_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await prewarm_task
         if refresher is not None:
             await refresher.stop()
         if long_term is not None:
